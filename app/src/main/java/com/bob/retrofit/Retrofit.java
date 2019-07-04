@@ -14,6 +14,28 @@ import java.util.concurrent.Executor;
 import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
 
+/**
+ * @Desc 举个栗子
+ *  public interface PersonalProtocol {
+ *       @FormUrlEncoded
+ *       @POST("user/personalListInfo")
+ *       Call<Response<PersonalInfo>> getPersonalListInfo(@Field("cur_page") int page);
+ *  }
+ *
+ *  Retrofit retrofit = new Retrofit.Builder().baseUrl("www.xxxx.com/").build();
+ *  PersonalProtocol personalProtocol = retrofit.create(PersonalProtocol.class);
+ *  Call<Response<PersonalInfo>> call = personalProtocol.getPersonalListInfo(12);
+ *  call.enqueue(new Callback<Response<PersonalInfo>>() {
+ *      @Override
+ *      public void onResponse(Call<Response<PersonalInfo>> call, Response<Response<PersonalInfo>> response) {
+ *          //数据请求成功
+ *      }
+ *      @Override
+ *      public void onFailure(Call<Response<PersonalInfo>> call, Throwable t) {
+ *          //数据请求失败
+ *      }
+ *  });
+ */
 public final class Retrofit {
 
     final okhttp3.Call.Factory callFactory;
