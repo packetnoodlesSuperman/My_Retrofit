@@ -1,5 +1,7 @@
 package com.bob.retrofit.okhttp;
 
+import java.util.Collection;
+
 /**
  * String url = "http://wwww.baidu.com";
  * OkHttpClient okHttpClient = new OkHttpClient();
@@ -22,6 +24,9 @@ package com.bob.retrofit.okhttp;
 public class OkHttpClient implements Cloneable, Call.Factory, WebSocket.Factory {
 
     Dispatcher dispatcher;
+    int connectTimeout;
+    int readTimeout;
+    int writeTimeout;
 
     @Override
     public Call newCall(Request request) {
@@ -34,6 +39,32 @@ public class OkHttpClient implements Cloneable, Call.Factory, WebSocket.Factory 
 
     @Override
     public WebSocket newWebSocket(Request request, WebSocketListener listener) {
+        return null;
+    }
+
+    public EventListener.Factory eventListenerFactory() {
+        return null;
+    }
+
+    public int connectTimeoutMillis() {
+        return connectTimeout;
+    }
+
+    /** Default read timeout (in milliseconds). */
+    public int readTimeoutMillis() {
+        return readTimeout;
+    }
+
+    /** Default write timeout (in milliseconds). */
+    public int writeTimeoutMillis() {
+        return writeTimeout;
+    }
+
+    public Collection<? extends Interceptor> interceptors() {
+        return null;
+    }
+
+    public ConnectionPool connectionPool() {
         return null;
     }
 }
