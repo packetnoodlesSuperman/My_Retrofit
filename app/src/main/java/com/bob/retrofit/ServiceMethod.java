@@ -19,6 +19,10 @@ import okhttp3.ResponseBody;
  */
 public final class ServiceMethod<R, T> {
 
+    static final String PARAM = "[a-zA-Z][a-zA-Z0-9_-]*";
+    static final Pattern PARAM_URL_REGEX = Pattern.compile("\\{(" + PARAM + ")\\}");
+    static final Pattern PARAM_NAME_REGEX = Pattern.compile(PARAM);
+
     private final String httpMethod;
     private final HttpUrl baseUrl;
     private final String relativeUrl;
@@ -32,6 +36,8 @@ public final class ServiceMethod<R, T> {
 
     //这个R 就是Call<R> 或者Observable<R>中的  而returnType 就是Call<R> 或者Observable<R>
     private final CallAdapter<R, T> callAdapter;
+
+    private final ParameterHandler<?> parameterHandlers;
 
     public ServiceMethod(Builder<R, T> builder) {
         this.callFactory = builder.retrofit.callFactory();
@@ -55,6 +61,9 @@ public final class ServiceMethod<R, T> {
                 isFormEncoded,
                 isMultipart
         );
+        ParameterHandler<Object> handlers = (ParameterHandler<Object>) parameterHandlers;
+        int argumentCount = args != null ? args.length : 0;
+
         return callFactory.newCall(requestBuilder.build());
     }
 
@@ -83,6 +92,9 @@ public final class ServiceMethod<R, T> {
             //getGenericParameterTypes --> 返回参数类型 也就是参数的Class类型
             this.parameterTypes = method.getGenericParameterTypes();
             this.parameterAnnotationsArray = method.getParameterAnnotations();
+
+            //GET方法的键值对
+            Set<String> relativeUrlParamNames;
         }
 
         //解析方法
@@ -150,11 +162,12 @@ public final class ServiceMethod<R, T> {
                 Matcher queryParamMatcher = PARAM_URL_REGEX.matcher(queryParams);
                 if (queryParamMatcher.find()) {
                     //抛出异常
+                    queryParamMatcher.group(1);
 
                 }
             }
 
-            parsePathParameters(value);
+            this.relativeUrlParamNames = parsePathParameters(value);
         }
 
         private Set<String> parsePathParameters(String path) {
