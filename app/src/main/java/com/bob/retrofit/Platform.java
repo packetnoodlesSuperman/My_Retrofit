@@ -1,5 +1,6 @@
 package com.bob.retrofit;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
 
 public class Platform {
@@ -23,6 +24,23 @@ public class Platform {
             return new ExecutorCallAdapterFactory(callbackExecutor);
         }
         return DefaultCallAdapterFactory.INSTANCE;
+    }
+
+    public boolean isDefaultMethod(Method method) {
+        return false;
+    }
+
+    public Object invokeDefaultMethod(Method method, Class<?> service, Object proxy, Object[] args) {
+        return null;
+    }
+
+
+    static class Android extends Platform {
+
+        @Override
+        public Object invokeDefaultMethod(Method method, Class<?> service, Object proxy, Object[] args) {
+            return super.invokeDefaultMethod(method, service, proxy, args);
+        }
     }
 
 }

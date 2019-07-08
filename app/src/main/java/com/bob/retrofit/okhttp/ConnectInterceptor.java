@@ -1,5 +1,6 @@
 package com.bob.retrofit.okhttp;
 
+import com.bob.retrofit.okhttp.connection.RealConnection;
 import com.bob.retrofit.okhttp.http.HttpCodec;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ public class ConnectInterceptor implements Interceptor {
         StreamAllocation streamAllocation = realChain.streamAllocation();
         boolean doExtensiveHealthChecks = !request.method().equals("GET");
         HttpCodec httpCodec = streamAllocation.newStream(client, chain, doExtensiveHealthChecks);
-        return null;
+        RealConnection connection = streamAllocation.connection();
+        return realChain.proceed(request, streamAllocation, httpCodec, connection);
     }
 }

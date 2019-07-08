@@ -70,7 +70,9 @@ public class OkHttpCall<T> implements Call<T> {
 
     private okhttp3.Call createRawCall() {
         okhttp3.Call call = serviceMethod.toCall(args);
-
+        if (call == null) {
+            throw new NullPointerException("Call.Factory returned null.");
+        }
         return call;
     }
 

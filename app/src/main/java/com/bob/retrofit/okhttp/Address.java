@@ -8,10 +8,20 @@ import javax.net.ssl.SSLSocketFactory;
 
 public final class Address {
 
+    final HttpUrl url;
     final @Nullable SSLSocketFactory sslSocketFactory;
 
     public Address(SSLSocketFactory sslSocketFactory) {
         this.sslSocketFactory = sslSocketFactory;
+        this.url = new HttpUrl.Builder()
+                .scheme(sslSocketFactory != null ? "https" : "http")
+                .host(uriHost)
+                .port(uriPort)
+                .build();
+
+
+
+
     }
 
     public HttpUrl url() {

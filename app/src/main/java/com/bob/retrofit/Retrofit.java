@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
 
@@ -38,18 +39,36 @@ import okhttp3.ResponseBody;
  */
 public final class Retrofit {
 
-    final okhttp3.Call.Factory callFactory;
-
+    //一个方法 对应的方法头上的注解解析  缓存
     private final Map<Method, ServiceMethod<?, ?>> serviceMethodCache = new ConcurrentHashMap<>();
+    //OkHttpClient实现了Call.Factory接口
+    final okhttp3.Call.Factory callFactory;
+    //url的封装 协议-域名-端口-路径-键值对
+    final HttpUrl baseUrl;
+    //
+    final List<Converter.Factory> converterFactories;
+    //适配转换器
+    final List<CallAdapter.Factory> callAdapterFactories;
 
-    private final List<CallAdapter.Factory> adapterFactories;
+    final Executor callbackExecutor;
+    //判断是否是提前解析这个接口
+    final boolean validateEagerly;
 
     Retrofit(
             okhttp3.Call.Factory callFactory,
-            List<CallAdapter.Factory> adapterFactories
+            HttpUrl baseUrl,
+            List<Converter.Factory> converterFactories,
+            List<CallAdapter.Factory> callAdapterFactories,
+            Executor callbackExecutor,
+            boolean validateEagerly
     ) {
         this.callFactory = callFactory;
-        this.adapterFactories = adapterFactories;
+        this.baseUrl = baseUrl;
+        this.converterFactories = converterFactories;
+        this.callAdapterFactories = callAdapterFactories;
+        this.callbackExecutor = callbackExecutor;
+        this.validateEagerly = validateEagerly;
+
     }
 
 
@@ -58,16 +77,33 @@ public final class Retrofit {
         //是否为合法接口
         Utils.validateServiceInterface(service);
 
+        if (validateEagerly) {
+            eagerlyValidateMethods(service);
+        }
+
         //返回动态生成的代理类 也就是 service 的实例化对象
         return (T) Proxy.newProxyInstance(service.getClassLoader(),
                 new Class<?>[]{service},
                 new InvocationHandler() {
+
+                    //平台
+                    private final Platform platform = Platform.get();
 
                     /**
                      * @return 返回的是 Call<R>
                      */
                     @Override
                     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        //如果是父类方法
+                        if (method.getDeclaringClass() == Object.class) {
+                            return method.invoke(this, args);
+                        }
+
+                        if (platform.isDefaultMethod(method)) {
+                            return platform.invokeDefaultMethod(method, service, proxy, args);
+                        }
+
 
                         //Object，任何类的父类  （T，在传入的时候就已经限定了参数的类型）
                         //T，泛型参数    <声明>一个泛型类或泛型方法
@@ -80,7 +116,19 @@ public final class Retrofit {
                 });
     }
 
+    //提前解析这个类中的所有方法
+    private <T> void eagerlyValidateMethods(Class<T> service) {
+        Platform platform = Platform.get();
+        for (Method method : service.getDeclaredMethods()) {
+            if (!platform.isDefaultMethod(method)) {
+                loadServiceMethod(method);
+            }
+        }
+    }
+
+    //解析方法
     private ServiceMethod<?, ?> loadServiceMethod(Method method) {
+        //获取缓存
         ServiceMethod<?, ?> serviceMethod = serviceMethodCache.get(method);
         if (serviceMethod != null) {
             return serviceMethod;
@@ -96,6 +144,10 @@ public final class Retrofit {
         return serviceMethod;
     }
 
+    /**
+     * @param returnType 返回Class类型
+     * @param annotations 方法上的所有注解
+     */
     public CallAdapter<?, ?> callAdapter(Type returnType, Annotation[] annotations) {
         return nextCallAdapter(null, returnType, annotations);
     }
@@ -103,9 +155,10 @@ public final class Retrofit {
     private CallAdapter<?, ?> nextCallAdapter(CallAdapter.Factory skipPast, Type returnType, Annotation[] annotations) {
 
         //如果skipPast == null 则返回-1  除非集合里面存了null
-        int start = adapterFactories.indexOf(skipPast) + 1;
-        for (int i = start, count = adapterFactories.size(); i < count; i++) {
-            CallAdapter<?, ?> adapter = adapterFactories.get(i).get(returnType, annotations, this);
+        int start = callAdapterFactories.indexOf(skipPast) + 1;
+        for (int i = start, count = callAdapterFactories.size(); i < count; i++) {
+            //一个一个尝试 拿到对应的适配器
+            CallAdapter<?, ?> adapter = callAdapterFactories.get(i).get(returnType, annotations, this);
             if (adapter != null) {
                 return adapter;
             }

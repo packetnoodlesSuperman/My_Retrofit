@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import okhttp3.Headers;
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
 import okhttp3.ResponseBody;
 
 /**
@@ -16,13 +19,25 @@ import okhttp3.ResponseBody;
  */
 public final class ServiceMethod<R, T> {
 
+    private final String httpMethod;
+    private final HttpUrl baseUrl;
+    private final String relativeUrl;
+    private final Headers headers;
+    private final MediaType contentType;
+    private final boolean hasBody;
+    private final boolean isFormEncoded;
+    private final boolean isMultipart;
+
     private final okhttp3.Call.Factory callFactory;
 
+    //这个R 就是Call<R> 或者Observable<R>中的  而returnType 就是Call<R> 或者Observable<R>
     private final CallAdapter<R, T> callAdapter;
 
     public ServiceMethod(Builder<R, T> builder) {
         this.callFactory = builder.retrofit.callFactory();
         this.callAdapter = builder.callAdapter;
+
+        this.httpMethod = builder.httpMethod;
     }
 
     T adapt(Call<R> call) {
@@ -30,8 +45,16 @@ public final class ServiceMethod<R, T> {
     }
 
     public okhttp3.Call toCall(Object[] args) {
-        RequestBuilder requestBuilder = new RequestBuilder();
-
+        RequestBuilder requestBuilder = new RequestBuilder(
+                httpMethod,
+                baseUrl,
+                relativeUrl,
+                headers,
+                contentType,
+                hasBody,
+                isFormEncoded,
+                isMultipart
+        );
         return callFactory.newCall(requestBuilder.build());
     }
 
@@ -62,10 +85,18 @@ public final class ServiceMethod<R, T> {
             this.parameterAnnotationsArray = method.getParameterAnnotations();
         }
 
+        //解析方法
         public ServiceMethod build() {
+            //
             callAdapter = createCallAdapter();
+            //Call<R> 这里的R就是 ---> responseType
             responseType = callAdapter.responseType();
 
+            if (responseType == Response.class || responseType == okhttp3.Response.class) {
+                throw methodError("", null);
+            }
+
+            //
             responseConverter = createResponseConverter();
 
             for (Annotation annotation : methodAnnotations) {
@@ -75,8 +106,18 @@ public final class ServiceMethod<R, T> {
             return null;
         }
 
+        private RuntimeException methodError(String message, Object... args) {
+            return methodError(null, message, args);
+        }
+
+        private RuntimeException methodError(Throwable cause, String message, Object... args) {
+            return null;
+        }
+
         private CallAdapter<T, R> createCallAdapter() {
+            //拿到返回值Class类型
             Type returnType = method.getGenericReturnType();
+            //获取方法上的所有注解
             Annotation[] annotations = method.getAnnotations();
             return (CallAdapter<T, R>)retrofit.callAdapter(returnType, annotations);
         }

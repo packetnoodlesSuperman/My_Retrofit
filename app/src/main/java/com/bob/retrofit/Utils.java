@@ -1,8 +1,13 @@
 package com.bob.retrofit;
 
+import android.view.animation.Animation;
+
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
+
+import okhttp3.ResponseBody;
 
 public final class Utils {
 
@@ -48,5 +53,15 @@ public final class Utils {
             return ((WildcardType) paramType).getUpperBounds()[0];
         }
         return paramType;
+    }
+
+    public static boolean isAnnotationPresent(
+            Annotation[] annotations, Class<? extends Annotation> clazz) {
+       for (Annotation annotation : annotations) {
+           if (clazz.isInstance(annotation)) {
+               return true;
+           }
+       }
+        return false;
     }
 }

@@ -3,6 +3,9 @@ package com.bob.retrofit;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+/**
+ * @Desc 对应的返回Class类型是 Call
+ */
 public class DefaultCallAdapterFactory extends CallAdapter.Factory {
 
     static final CallAdapter.Factory INSTANCE = new DefaultCallAdapterFactory();

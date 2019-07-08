@@ -10,6 +10,7 @@ import com.bob.retrofit.okhttp.Protocol;
 import com.bob.retrofit.okhttp.Request;
 import com.bob.retrofit.okhttp.Route;
 
+import java.net.Proxy;
 import java.net.Socket;
 import java.util.List;
 
@@ -78,8 +79,18 @@ public class RealConnection implements Connection {
             if (route.requiresTunnel()) {
                 connectTunnel(connectTimeout, readTimeout, writeTimeout, call, eventListener);
 
+            } else {
+                connectSocket();
             }
         }
+    }
+
+    private void connectSocket() {
+        Proxy proxy = route.proxy();
+
+        rawSocket = proxy.type() == Proxy.Type.DIRECT || proxy.type() == Proxy.Type.HTTP
+                ? address.socketFactory().createSocket() : new Socket(proxy);
+
     }
 
     private void connectTunnel(int connectTimeout, int readTimeout, int writeTimeout, Call call, EventListener eventListener) {
