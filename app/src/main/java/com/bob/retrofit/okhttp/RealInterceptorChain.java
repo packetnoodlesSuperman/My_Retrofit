@@ -6,6 +6,10 @@ import com.bob.retrofit.okhttp.http.HttpCodec;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * @Desc 该类用来管理所有拦截器， 也就是说在这里他会按照顺序调用每个拦截器
+ * 并返回结果，可以发现这个设计很巧妙，相当于流水线 每个工位只干特定事情
+ */
 public final class RealInterceptorChain implements Interceptor.Chain{
 
     //所有的拦截器
@@ -61,6 +65,8 @@ public final class RealInterceptorChain implements Interceptor.Chain{
         if (this.httpCodec != null && !this.connection.supportsUrl(request.url())) {
             throw new IllegalStateException();
         }
+        //将当前索引加1，再封装成RealInterceptorChain，传入当前拦截器
+        //这样我们就可以在当前拦截器中控制什么时候调用下一个拦截器了
         RealInterceptorChain next = new RealInterceptorChain(interceptors, streamAllocation, httpCodec,
                 connection, index + 1, request, call, eventListener, connectTimeout, readTimeout,
                 writeTimeout);

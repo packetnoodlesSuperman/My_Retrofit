@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
         System.out.print("person + " + person.getClass().hashCode() +" \n");
         person.eat();
 
-        //saveProxyClassFile();
+        saveProxyClassFile();
     }
 
     private static void saveProxyClassFile() {
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static void saveFile(byte[] proxy) {
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream("$Proxy0.class");
+            FileOutputStream fileOutputStream = new FileOutputStream("$Proxy0_system.class");
             fileOutputStream.write(proxy);
             fileOutputStream.close();
         } catch (Exception e) {

@@ -6,6 +6,7 @@ import com.bob.retrofit.okhttp.connection.RealConnection;
 import com.bob.retrofit.okhttp.http.HttpCodec;
 
 import java.io.IOException;
+import java.net.Socket;
 
 public class StreamAllocation {
 
@@ -40,6 +41,26 @@ public class StreamAllocation {
         thread.isInterrupt();
         Thread.interrupted(); //会重置状态
         InterruptedException  //抛出这个异常会重置状态
+        return null;
+    }
+
+    public void release() {
+        Socket socket;
+        Connection releasedConnection;
+        synchronized (connectionPool) {
+            releasedConnection = connection;
+            socket = deallocate(false, true, false);
+
+            if (connection != null) {
+                releasedConnection = null;
+            }
+            closeQuietly(socket);
+        }
+    }
+
+    private Socket deallocate(boolean noNewStreams, boolean released, boolean streamFinished) {
+        //holdsLock --> 检测一个线程是否拥有锁
+        assert (Thread.holdsLock(connectionPool));
         return null;
     }
 }

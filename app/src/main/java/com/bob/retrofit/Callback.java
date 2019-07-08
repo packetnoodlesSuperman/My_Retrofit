@@ -1,9 +1,10 @@
 package com.bob.retrofit;
 
+//回调
 public interface Callback<T> {
 
     void onResponse(Call<T> call, Response<T> response);
 
-    void onFailture(Call<T> call, Throwable t);
+    void onFailure(Call<T> call, Throwable t);
 
 }

@@ -16,8 +16,17 @@ public class OkHttpCall<T> implements Call<T> {
     private final ServiceMethod<T, ?> serviceMethod;
     private final @Nullable Object[] args;
 
+    /**
+     * @GuardedBy(lock) --> @GuardedBy( "this" ) 受对象内部锁保护
+     */
     @GuardedBy("this")
     private @Nullable okhttp3.Call rawCall;
+    @GuardedBy("this")
+    private @Nullable Throwable creationFailure;
+    @GuardedBy("this")
+    private boolean executed;
+
+    private volatile boolean canceled;
 
     OkHttpCall(ServiceMethod<T, ?> serviceMethod, @Nullable Object[] args) {
         this.serviceMethod = serviceMethod;
@@ -40,18 +49,56 @@ public class OkHttpCall<T> implements Call<T> {
     }
 
     @Override
-    public void enqueue(Callback<T> callback) {
+    public void enqueue(final Callback<T> callback) {
         okhttp3.Call call;
+        Throwable failure;
 
-        call = rawCall = createRawCall();
+        synchronized (this) {
+            if (executed) {
+                throw new IllegalStateException("Already executed");
+            }
+            executed = true;
+
+            call = rawCall;
+            failure = creationFailure;
+
+            if (call == null && failure == null) {
+                try {
+                    call = rawCall = createRawCall();
+                } catch (Throwable t) {
+                    throwIfFatal(t);
+                    failure = creationFailure = t;
+                }
+            }
+        }
+
+        if (failure != null) {
+            callback.onFailture(this, failure);
+            return;
+        }
+
+        if (canceled) {
+            call.cancel();
+        }
 
         call.enqueue(new okhttp3.Callback() {
-
             @Override
             public void onResponse(okhttp3.Call call, okhttp3.Response rawResponse) throws IOException {
                 Response<T> response;
+                try {
+                    response = parseResponse(rawResponse);
+                } catch (Throwable e) {
+                    callFailure(e);
+                    return;
+                }
 
-                response = parseResponse(rawResponse);
+                try {
+                    //OkHttpCall.this 引用外部类this
+                    //this指针只不过是这个“结构体”的地址而已所以，只要数据成员被分配了内存，它就有可用值
+                    callback.onResponse(OkHttpCall.this, response);
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
             }
 
             @Override
@@ -59,6 +106,14 @@ public class OkHttpCall<T> implements Call<T> {
 
             }
         });
+    }
+
+    private void callFailure(Throwable e) {
+
+    }
+
+    private void throwIfFatal(Throwable t) {
+
     }
 
     private Response<T> parseResponse(okhttp3.Response rawResponse) {
@@ -83,12 +138,25 @@ public class OkHttpCall<T> implements Call<T> {
 
     @Override
     public void cancel() {
+        canceled = true;
 
+        okhttp3.Call call;
+        synchronized (this) {
+            call = rawCall;
+        }
+        if (call != null) {
+            call.cancel();
+        }
     }
 
     @Override
     public boolean isCanceled() {
-        return false;
+        if (canceled) {
+            return true;
+        }
+        synchronized (this) {
+            return rawCall != null && rawCall.isCanceled();
+        }
     }
 
     @Override

@@ -16,19 +16,20 @@ public final class RequestBuilder {
     private static final char[] HEX_DIGITS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
     private static final String PATH_SEGMENT_ALWAYS_ENCODE_SET = "\"<>^`{}\\?#";
-
+    //请求类型，post或者get 等等
     private final String method;
-    //OkHttp的baseUrl
+    //OkHttp的baseUrl 根地址
     private final HttpUrl baseUrl;
     //HttpUrl 的相对路径 比如GET、POST 注解后面的url路径
     private String relativeUrl;
-
+    //HttpUrl的Builder
     private HttpUrl.Builder urlBuilder;
-
+    //okHttp3里面的Request.Builder
     private final Request.Builder requestBuilder;
-
+    //MediaType 也是okHttp3里面的MediaTyep。MediaType即是Internet Media Type，
+    //互联网媒体类型；也叫做MIME类型，在http协议消息头中，使用Content-Type来表示具体请求中的媒体类型信息。
     private MediaType contentType;
-
+    // 布尔类型，代表都是有body
     private final boolean hasBody;
 
     private MultipartBody.Builder multipartBuilder;

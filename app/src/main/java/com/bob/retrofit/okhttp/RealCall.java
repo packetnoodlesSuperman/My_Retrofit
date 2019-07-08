@@ -25,6 +25,9 @@ public class RealCall implements Call {
         return null;
     }
 
+    /**
+     * 同步请求
+     */
     @Override
     public Response execute() throws IOException {
         return null;
@@ -106,8 +109,13 @@ public class RealCall implements Call {
 
         interceptors.addAll(client.interceptors());
         interceptors.add(retryAndFollowUpInterceptor);
-
+        interceptors.add(new BridgeInterceptor(client.cookieJar()));
+        interceptors.add(new CacheInterceptor(client.internalCache()));
         interceptors.add(new ConnectInterceptor(client));
+        if (!forWebSocket) {
+            interceptors.addAll(client.networkInterceptors());
+        }
+        interceptors.add(new CallServerInterceptor(forWebSocket));
 
         Interceptor.Chain chain = new RealInterceptorChain(
                 interceptors,
@@ -126,3 +134,28 @@ public class RealCall implements Call {
     }
 
 }
+/**
+ * 1. OKio OKHttp Retrofit源码
+ * 2. RxJava 操作符 能自己封装一个RXView
+ * 3. Thread Executor Android的异步 handler 多线程 HandlerThread
+ * 4. apt apjectJ
+ * 5. 注解 Dagger2 Annotations EventBus ButterKnife源码
+ * 6. view 窗口机制
+ * 7. Activity启动流程 aidl binder
+ * 8. 事件分发
+ * 9. Kotlin
+ * 10. 组件化、插件化
+ * 11.设计模式 原则等
+ * 12. 反射 动态代理原理 类加载机制
+ * 13. 测试 Junit AndroidTest
+ * 14. jetPack
+ * 15. gradle
+ * 16. android动画
+ * 17. android适配
+ * 18. 性能优化
+ * 19. Glide。数据库GreenDao 手写数据库（动脑学院）
+ * 20. WebView
+ * 21. jni
+ *
+ * * 数据结构 数据安全与加密 Http协议
+ */
