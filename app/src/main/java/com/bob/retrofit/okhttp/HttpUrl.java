@@ -1,5 +1,6 @@
 package com.bob.retrofit.okhttp;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import okio.Buffer;
@@ -37,6 +38,7 @@ public final class HttpUrl {
         String scheme;
         String host;
         int port = -1;
+        List<String> encodedQueryNamesAndValues;
 
         public Builder scheme(String scheme) {
             if (scheme == null) {
@@ -81,6 +83,17 @@ public final class HttpUrl {
 
         public int effectivePort() {
             return port != -1 ? port : defaultPort(scheme);
+        }
+
+        public Builder addEncodedQueryParameter(String encodedName, String encodeValue) {
+            if (encodedName == null) {
+                throw new NullPointerException();
+            }
+            if (encodedQueryNamesAndValues == null) {
+                encodedQueryNamesAndValues = new ArrayList<>();
+            }
+            encodedQueryNamesAndValues.add();
+
         }
 
         public static int defaultPort(String scheme) {

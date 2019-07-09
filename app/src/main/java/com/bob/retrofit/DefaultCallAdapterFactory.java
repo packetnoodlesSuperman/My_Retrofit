@@ -10,6 +10,11 @@ public class DefaultCallAdapterFactory extends CallAdapter.Factory {
 
     static final CallAdapter.Factory INSTANCE = new DefaultCallAdapterFactory();
 
+    /**
+     * @param returnType 方法返回值的type类型
+     * @param annotations 方法上的注解
+     * @param retrofit retrofit
+     */
     @Override
     public CallAdapter<?, ?> get(Type returnType, Annotation[] annotations, Retrofit retrofit) {
         if (getRawType(returnType) != Call.class) {

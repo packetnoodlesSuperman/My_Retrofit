@@ -1,5 +1,11 @@
 package com.bob.retrofit;
 
+import android.support.annotation.Nullable;
+
+import com.bob.retrofit.okhttp.HttpUrl;
+import com.bob.retrofit.okhttp.OkHttpClient;
+import com.bob.retrofit.okhttp.ResponseBody;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -10,10 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.ResponseBody;
 
 /**
  * @Desc 举个栗子
@@ -42,20 +44,20 @@ public final class Retrofit {
     //一个方法 对应的方法头上的注解解析  缓存
     private final Map<Method, ServiceMethod<?, ?>> serviceMethodCache = new ConcurrentHashMap<>();
     //OkHttpClient实现了Call.Factory接口
-    final okhttp3.Call.Factory callFactory;
+    final com.bob.retrofit.okhttp.Call.Factory callFactory;
     //url的封装 协议-域名-端口-路径-键值对
     final HttpUrl baseUrl;
     //
     final List<Converter.Factory> converterFactories;
     //适配转换器
     final List<CallAdapter.Factory> callAdapterFactories;
-
+    //线程池 这个干吗的呢？ TODO
     final Executor callbackExecutor;
-    //判断是否是提前解析这个接口
+    //判断是否是提前解析这个接口类的所有方法
     final boolean validateEagerly;
 
     Retrofit(
-            okhttp3.Call.Factory callFactory,
+            com.bob.retrofit.okhttp.Call.Factory callFactory,
             HttpUrl baseUrl,
             List<Converter.Factory> converterFactories,
             List<CallAdapter.Factory> callAdapterFactories,
@@ -100,6 +102,7 @@ public final class Retrofit {
                             return method.invoke(this, args);
                         }
 
+                        //这个只有Java8平台才会走此方法  android平台固定返回false
                         if (platform.isDefaultMethod(method)) {
                             return platform.invokeDefaultMethod(method, service, proxy, args);
                         }
@@ -145,7 +148,7 @@ public final class Retrofit {
     }
 
     /**
-     * @param returnType 返回Class类型
+     * @param returnType 方法返回的Type类型
      * @param annotations 方法上的所有注解
      */
     public CallAdapter<?, ?> callAdapter(Type returnType, Annotation[] annotations) {
@@ -168,6 +171,10 @@ public final class Retrofit {
         return null;
     }
 
+    /**
+     * @param responseType Call<T> 或者 Obserable<T> 中T的type类型
+     * @param annotations method上的注解
+     */
     public <T> Converter<ResponseBody, T> responseBodyConverter(Type responseType, Annotation[] annotations) {
         return nextResponseBodyConverter(null, responseType, annotations);
     }
@@ -177,34 +184,80 @@ public final class Retrofit {
         return null;
     }
 
-    public okhttp3.Call.Factory callFactory() {
+    public com.bob.retrofit.okhttp.Call.Factory callFactory() {
         return callFactory;
     }
 
     //内部类 配置
     public static final class Builder {
-
-        private okhttp3.Call.Factory callFactory;
-
+        //平台
         private Platform platform;
-        private List<CallAdapter.Factory> adapterFactories = new ArrayList<>();
+        //手动传入自定义的 OKhttpCilent
+        private com.bob.retrofit.okhttp.Call.Factory callFactory;
+        //根url
+        private HttpUrl baseUrl;
+        //转换器工厂 集合
+        private final List<Converter.Factory> converterFactories = new ArrayList<>();
+        //适配器工厂 集合  响应转换成 Call<T> 或者 Observable<T>  （序列化与反序列化 socket有读写的流）
+        private List<CallAdapter.Factory> callAdapterFactories = new ArrayList<>();
+        //线程池 这个干吗的呢？ TODO
+        private @Nullable Executor callbackExecutor;
+        //判断是否是提前解析这个接口类的所有方法
+        private boolean validateEagerly;
 
-        Builder() {
-            this(Platform.get());
-        }
+        public Builder() { this(Platform.get()); }
 
-        Builder(Platform platform) {
-            this.platform = platform;
+        Builder(Platform platform) { this.platform = platform; }
+        Builder(Retrofit retrofit) {
+            platform = Platform.get();
+            callFactory = retrofit.callFactory;
+            baseUrl = retrofit.baseUrl;
+            converterFactories.addAll(retrofit.converterFactories);
+            converterFactories.remove(0);
+            callAdapterFactories.addAll(retrofit.callAdapterFactories);
+            callAdapterFactories.remove(callAdapterFactories.size() - 1);
+            callbackExecutor = retrofit.callbackExecutor;
+            validateEagerly = retrofit.validateEagerly;
         }
 
         public Builder baseUrl(String baseUrl) {
-            return null;
+            Utils.checkNotNull(baseUrl, "baseUrl == null");
+            HttpUrl httpUrl = HttpUrl.parse(baseUrl);
+            if (httpUrl == null) {
+                throw new IllegalArgumentException("Illegal URL: " + baseUrl);
+            }
+            return baseUrl(httpUrl);
         }
 
+        public Builder baseUrl(HttpUrl baseUrl) {
+            Utils.checkNotNull(baseUrl, "baseUrl == null");
+            List<String> pathSegments = baseUrl.pathSegments();
+            if (!"".equals(pathSegments.get(pathSegments.size() - 1))) {
+                throw new IllegalArgumentException("baseUrl must end in /: " + baseUrl);
+            }
+            this.baseUrl = baseUrl;
+            return this;
+        }
+
+        /**
+         * @param client 需要设置OkHttpClient
+         */
+        public Builder client(OkHttpClient client) {
+            return callFactory(Utils.checkNotNull(client, "client == null"));
+        }
+
+        public Builder callFactory(com.bob.retrofit.okhttp.Call.Factory factory) {
+            this.callFactory = Utils.checkNotNull(factory, "factory == null");
+            return this;
+        }
+
+        public Builder validateEagerly(boolean validateEagerly) {
+            this.validateEagerly = validateEagerly;
+            return this;
+        }
 
         public Retrofit build() {
-
-            okhttp3.Call.Factory callFactory = this.callFactory;
+            com.bob.retrofit.okhttp.Call.Factory callFactory = this.callFactory;
             if (callFactory == null) {
                 callFactory = new OkHttpClient();
             }
@@ -214,11 +267,14 @@ public final class Retrofit {
                 callbackExecutor = platform.defaultCallbackExecutor();
             }
 
-            List<CallAdapter.Factory> adapterFactories = new ArrayList<>(this.adapterFactories);
+            List<CallAdapter.Factory> adapterFactories = new ArrayList<>(this.callAdapterFactories);
             adapterFactories.add(platform.defaultCallAdapterFactory(callbackExecutor));
-            return new Retrofit(callFactory, adapterFactories);
+            return new Retrofit(callFactory,              //client
+                                baseUrl,                  //根url
+                                converterFactories,     //转换器
+                                adapterFactories,         //适配器
+                                callbackExecutor,         //线程池
+                                validateEagerly);       //提前解析开关
         }
-
     }
-
 }

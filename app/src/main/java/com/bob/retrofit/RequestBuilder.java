@@ -108,6 +108,15 @@ public final class RequestBuilder {
                 .build();
     }
 
+    public void addQueryParam(String name, String value, boolean encoded) {
+
+        if (encoded) {
+            urlBuilder.addEncodedQueryParameter(name, value);
+        } else {
+            urlBuilder.addQueryParameter(name, value);
+        }
+    }
+
     private static class ContentTypeOverridingRequestBody extends RequestBody {
 
         private final RequestBody delegate;

@@ -38,6 +38,27 @@ public class BuiltInConverters extends Converter.Factory {
         }
     }
 
-    static final class BufferingResponseBodyConverter implements Converter<ResponseBody, ResponseBody>
+    static final class BufferingResponseBodyConverter implements Converter<ResponseBody, ResponseBody> {
+        static final BufferingResponseBodyConverter INSTANCE = new BufferingResponseBodyConverter();
+        @Override
+        public ResponseBody convert(ResponseBody value) throws IOException {
+            try {
+                return Utils.buffer(value);
+            } finally {
+                value.close();
+            }
+        }
+    }
+
+    /**
+     * @Desc Object转换成String类型 其实就是打印出toString方法
+     */
+    static final class ToStringConverter implements Converter<Object, String> {
+        static final ToStringConverter INSTANCE = new ToStringConverter();
+        @Override
+        public String convert(Object value) throws IOException {
+            return value.toString();
+        }
+    }
 
 }

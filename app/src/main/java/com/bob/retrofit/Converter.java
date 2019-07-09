@@ -2,12 +2,12 @@ package com.bob.retrofit;
 
 import android.support.annotation.Nullable;
 
+import com.bob.retrofit.okhttp.RequestBody;
+import com.bob.retrofit.okhttp.ResponseBody;
+
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-
-import okhttp3.RequestBody;
-import okhttp3.ResponseBody;
 
 /**
  * 在Http请求中实现对象的转化， 将F 转化成 T

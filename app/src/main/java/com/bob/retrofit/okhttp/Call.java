@@ -18,7 +18,7 @@ public interface Call extends Cloneable {
 
     Call clone();
 
-    interface Factory {
+    public interface Factory {
 
         Call newCall(Request request);
 
