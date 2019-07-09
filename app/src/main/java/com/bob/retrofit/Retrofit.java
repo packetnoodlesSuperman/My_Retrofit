@@ -25,7 +25,7 @@ import java.util.concurrent.Executor;
  *       Call<Response<PersonalInfo>> getPersonalListInfo(@Field("cur_page") int page);
  *  }
  *
- *  Retrofit retrofit = new Retrofit.Builder().baseUrl("www.xxxx.com/").build();
+ *  Retrofit retrofit = new Retrofit.Builder().baseUrl("www.xxxx.com/").build();  //不设置client会提供一个默认的
  *  PersonalProtocol personalProtocol = retrofit.create(PersonalProtocol.class);
  *  Call<Response<PersonalInfo>> call = personalProtocol.getPersonalListInfo(12);
  *  call.enqueue(new Callback<Response<PersonalInfo>>() {
@@ -45,13 +45,13 @@ public final class Retrofit {
     private final Map<Method, ServiceMethod<?, ?>> serviceMethodCache = new ConcurrentHashMap<>();
     //OkHttpClient实现了Call.Factory接口
     final com.bob.retrofit.okhttp.Call.Factory callFactory;
-    //url的封装 协议-域名-端口-路径-键值对
+    //根Url
     final HttpUrl baseUrl;
-    //
+    //转换器
     final List<Converter.Factory> converterFactories;
     //适配转换器
     final List<CallAdapter.Factory> callAdapterFactories;
-    //线程池 这个干吗的呢？ TODO
+    /**{@link ExecutorCallAdapterFactory} 参照这个类 在Android—Platform中**/
     final Executor callbackExecutor;
     //判断是否是提前解析这个接口类的所有方法
     final boolean validateEagerly;
@@ -70,10 +70,11 @@ public final class Retrofit {
         this.callAdapterFactories = callAdapterFactories;
         this.callbackExecutor = callbackExecutor;
         this.validateEagerly = validateEagerly;
-
     }
 
-
+    /**
+     * @Desc 精华部分
+     */
     @SuppressWarnings("unchecked")
     public <T> T create(final Class<T> service) {
         //是否为合法接口
@@ -107,7 +108,6 @@ public final class Retrofit {
                             return platform.invokeDefaultMethod(method, service, proxy, args);
                         }
 
-
                         //Object，任何类的父类  （T，在传入的时候就已经限定了参数的类型）
                         //T，泛型参数    <声明>一个泛型类或泛型方法
                         //?，类型通配符  <使用>一个泛型类或泛型方法
@@ -137,6 +137,7 @@ public final class Retrofit {
             return serviceMethod;
         }
 
+        //去解析这个Method成一个MethodService
         synchronized (serviceMethodCache) {
             serviceMethod = serviceMethodCache.get(method);
             if (serviceMethod == null) {
@@ -154,9 +155,7 @@ public final class Retrofit {
     public CallAdapter<?, ?> callAdapter(Type returnType, Annotation[] annotations) {
         return nextCallAdapter(null, returnType, annotations);
     }
-
     private CallAdapter<?, ?> nextCallAdapter(CallAdapter.Factory skipPast, Type returnType, Annotation[] annotations) {
-
         //如果skipPast == null 则返回-1  除非集合里面存了null
         int start = callAdapterFactories.indexOf(skipPast) + 1;
         for (int i = start, count = callAdapterFactories.size(); i < count; i++) {
@@ -166,7 +165,6 @@ public final class Retrofit {
                 return adapter;
             }
         }
-
         //否则抛异常
         return null;
     }
@@ -178,17 +176,17 @@ public final class Retrofit {
     public <T> Converter<ResponseBody, T> responseBodyConverter(Type responseType, Annotation[] annotations) {
         return nextResponseBodyConverter(null, responseType, annotations);
     }
-
     private <T> Converter<ResponseBody, T> nextResponseBodyConverter(Converter.Factory skipPast, Type responseType, Annotation[] annotations) {
 
         return null;
     }
 
+
     public com.bob.retrofit.okhttp.Call.Factory callFactory() {
         return callFactory;
     }
 
-    //内部类 配置
+    /************************** 内部类 配置 **************************/
     public static final class Builder {
         //平台
         private Platform platform;
@@ -257,18 +255,32 @@ public final class Retrofit {
         }
 
         public Retrofit build() {
+            if (baseUrl == null) {
+                throw new IllegalStateException("Base URL required.");
+            }
+
             com.bob.retrofit.okhttp.Call.Factory callFactory = this.callFactory;
+            //如果client是空 则设置一个默认的
             if (callFactory == null) {
                 callFactory = new OkHttpClient();
             }
 
+            //获取一个默认的adapterFactory
+            /**Android平台是{@link ExecutorCallAdapterFactory} Java8平台是{@link DefaultCallAdapterFactory}**/
             Executor callbackExecutor = null;
             if (callbackExecutor == null) {
                 callbackExecutor = platform.defaultCallbackExecutor();
             }
-
             List<CallAdapter.Factory> adapterFactories = new ArrayList<>(this.callAdapterFactories);
+            /**是{@link ExecutorCallAdapterFactory}还是{@link DefaultCallAdapterFactory} 全由callbackExecutor==null判断**/
             adapterFactories.add(platform.defaultCallAdapterFactory(callbackExecutor));
+
+            //转换器 第一个位置先加上BuiltInConverters()
+            List<Converter.Factory> converterFactories = new ArrayList<>(1 + this.converterFactories.size());
+            converterFactories.add(new BuiltInConverters());
+            converterFactories.addAll(this.converterFactories);
+
+            //创建Retrofit
             return new Retrofit(callFactory,              //client
                                 baseUrl,                  //根url
                                 converterFactories,     //转换器
