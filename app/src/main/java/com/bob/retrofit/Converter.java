@@ -7,6 +7,7 @@ import com.bob.retrofit.okhttp.ResponseBody;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 /**
@@ -23,6 +24,9 @@ public interface Converter<F, T> {
      */
     abstract class Factory {
 
+        /**
+         * 将响应体转换的转换器  ResponseBody --> T
+         */
         public Converter<ResponseBody, ?> responseBodyConverter(
                 Type type,
                 Annotation[] annotations,
@@ -31,6 +35,9 @@ public interface Converter<F, T> {
             return null;
         }
 
+        /**
+         * 将请求体转换的转换器  T --> RequestBody
+         */
         public @Nullable Converter<?, RequestBody> requestBodyConverter(
                 Type type,
                 Annotation[] parameterAnnotations,
@@ -39,6 +46,18 @@ public interface Converter<F, T> {
             return null;
         }
 
+
+        public Converter<?, String> stringConverter(Type type, Annotation[] annotations, Retrofit retrofit) {
+            return null;
+        }
+
+        protected static Type getParameterUpperBound(int index, ParameterizedType type) {
+            return Utils.getParameterUpperBound(index, type);
+        }
+
+        protected static Class<?> getRawType(Type type) {
+            return Utils.getRawType(type);
+        }
     }
 
 }

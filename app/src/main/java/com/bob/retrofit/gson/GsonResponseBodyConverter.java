@@ -1,6 +1,7 @@
 package com.bob.retrofit.gson;
 
 import com.bob.retrofit.Converter;
+import com.bob.retrofit.okhttp.ResponseBody;
 import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
 import com.google.gson.TypeAdapter;
@@ -8,8 +9,6 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
 import java.io.IOException;
-
-import okhttp3.ResponseBody;
 
 public class GsonResponseBodyConverter<T> implements Converter<ResponseBody, T> {
 

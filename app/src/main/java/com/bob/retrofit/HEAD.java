@@ -24,11 +24,11 @@ import okhttp3.HttpUrl;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-/** Make a GET request. */
+/** Make a HEAD request. */
 @Documented
 @Target(METHOD)
 @Retention(RUNTIME)
-public @interface GET {
+public @interface HEAD {
   /**
    * A relative or absolute path, or full URL of the endpoint. This value is optional if the first
    * parameter of the method is annotated with {@link Url @Url}.

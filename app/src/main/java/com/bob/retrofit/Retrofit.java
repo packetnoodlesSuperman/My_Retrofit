@@ -79,7 +79,7 @@ public final class Retrofit {
     public <T> T create(final Class<T> service) {
         //是否为合法接口
         Utils.validateServiceInterface(service);
-
+        //是否提前解析该接口的所有方法
         if (validateEagerly) {
             eagerlyValidateMethods(service);
         }
@@ -93,7 +93,7 @@ public final class Retrofit {
                     private final Platform platform = Platform.get();
 
                     /**
-                     * @return 返回的是 Call<R>
+                     * @return 返回的是 Call<R>  public Object invoke(···) 这个Object就是Call<T> 或者 Observable<T>
                      */
                     @Override
                     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -148,6 +148,18 @@ public final class Retrofit {
         return serviceMethod;
     }
 
+    public com.bob.retrofit.okhttp.Call.Factory callFactory() { return callFactory; }
+    public HttpUrl baseUrl() {
+        return baseUrl;
+    }
+    public List<CallAdapter.Factory> callAdapterFactories() { return callAdapterFactories; }
+    public List<Converter.Factory> converterFactories() {
+        return converterFactories;
+    }
+    public @Nullable Executor callbackExecutor() {
+        return callbackExecutor;
+    }
+
     /**
      * @param returnType 方法返回的Type类型
      * @param annotations 方法上的所有注解
@@ -165,7 +177,7 @@ public final class Retrofit {
                 return adapter;
             }
         }
-        //否则抛异常
+        //否则抛异常 ....
         return null;
     }
 
@@ -177,13 +189,21 @@ public final class Retrofit {
         return nextResponseBodyConverter(null, responseType, annotations);
     }
     private <T> Converter<ResponseBody, T> nextResponseBodyConverter(Converter.Factory skipPast, Type responseType, Annotation[] annotations) {
-
+        int start = converterFactories.indexOf(skipPast) + 1;
+        for (int i = start, count = converterFactories.size(); i < count; i++) {
+            Converter.Factory factory = converterFactories.get(i);
+            Converter converter = converterFactories.get(i).responseBodyConverter(responseType, annotations, this);
+            if (converter != null) {
+                //noinspection unchecked
+                return (Converter<ResponseBody, T>) converter;
+            }
+        }
+        //否则抛出异常
         return null;
     }
 
-
-    public com.bob.retrofit.okhttp.Call.Factory callFactory() {
-        return callFactory;
+    public Builder newBuilder() {
+        return new Builder(this);
     }
 
     /************************** 内部类 配置 **************************/

@@ -1,6 +1,8 @@
 package com.bob.retrofit.gson;
 
 import com.bob.retrofit.Converter;
+import com.bob.retrofit.okhttp.MediaType;
+import com.bob.retrofit.okhttp.RequestBody;
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonWriter;
@@ -10,8 +12,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 
-import okhttp3.MediaType;
-import okhttp3.RequestBody;
 import okio.Buffer;
 
 public class GsonRequestBodyConverter<T> implements Converter<T, RequestBody> {

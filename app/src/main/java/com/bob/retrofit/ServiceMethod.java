@@ -16,28 +16,38 @@ import okhttp3.ResponseBody;
 
 /**
  * @param <R> 就是后台返回的JS对象 响应对象
- * @param <T>
+ * @param <T> returnType
  */
 public final class ServiceMethod<R, T> {
 
+    //正则
     static final String PARAM = "[a-zA-Z][a-zA-Z0-9_-]*";
     static final Pattern PARAM_URL_REGEX = Pattern.compile("\\{(" + PARAM + ")\\}");
     static final Pattern PARAM_NAME_REGEX = Pattern.compile(PARAM);
 
-    private final String httpMethod;
-    private final HttpUrl baseUrl;
-    private final String relativeUrl;
-    private final Headers headers;
-    private final MediaType contentType;
-    private final boolean hasBody;
-    private final boolean isFormEncoded;
-    private final boolean isMultipart;
-    private final Converter<ResponseBody, R> responseConverter;
+    //client 也就是OkhttpClient
     private final okhttp3.Call.Factory callFactory;
-
-    //这个R 就是Call<R> 或者Observable<R>中的  而returnType 就是Call<R> 或者Observable<R>
+    //是Call<T> 还是 Observable<T>  R就是响应  T就是转换的returnType
     private final CallAdapter<R, T> callAdapter;
-
+    //转换器 序列化与反序列化
+    private final Converter<ResponseBody, R> responseConverter;
+    //根Url
+    private final HttpUrl baseUrl;
+    //方法类型 是GET 还是POST
+    private final String httpMethod;
+    //Url 的Path路径
+    private final String relativeUrl;
+    //头信息
+    private final Headers headers;
+    //是否有body 除了GET DELETE HEAD OPTIONS
+    private final boolean hasBody;
+    //是否编码
+    private final boolean isFormEncoded;
+    //是否是Multipart格式
+    private final boolean isMultipart;
+    //文本格式
+    private final MediaType contentType;
+    //解析方法参数内的 注解
     private final ParameterHandler<?> parameterHandlers;
 
     public ServiceMethod(Builder<R, T> builder) {
