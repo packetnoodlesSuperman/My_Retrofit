@@ -67,6 +67,14 @@ public final class RequestBuilder {
         }
     }
 
+    //设置请求的 路径 Path 相对路径
+    void setRelativeUrl(Object relativeUrl) {
+        this.relativeUrl = relativeUrl.toString();
+    }
+
+    void addHeader(String name, String value) {
+
+    }
 
     Request build() {
         HttpUrl url;

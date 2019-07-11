@@ -50,7 +50,15 @@ public abstract class ParameterHandler<T> {
     }
 
 
-    /******************** 内部类 子类 ********************/
+    /**************************** 内部类 子类 ****************************/
+
+    //Url的 路径 path
+    static final class RelativeUrl extends ParameterHandler<Object> {
+        @Override
+        void apply(RequestBuilder builder, Object value) throws IOException {
+            builder.setRelativeUrl(value);
+        }
+    }
 
     //GET上的查询键值对 encoded 表示是否编码
     static final class Query<T> extends ParameterHandler<T> {

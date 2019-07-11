@@ -69,7 +69,7 @@ public final class ServiceMethod<R, T> {
         return callAdapter.adapt(call);
     }
 
-    public okhttp3.Call toCall(Object... args) {
+    public com.bob.retrofit.okhttp.Call toCall(Object... args) {
         RequestBuilder requestBuilder = new RequestBuilder(
                 httpMethod,
                 baseUrl,

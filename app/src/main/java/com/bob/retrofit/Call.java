@@ -1,8 +1,8 @@
 package com.bob.retrofit;
 
-import java.io.IOException;
+import com.bob.retrofit.okhttp.Request;
 
-import okhttp3.Request;
+import java.io.IOException;;
 
 /**
  * @param <T> 该T就是业务对应解析的对象  也就是后台返回的JS对象 泛型T是response的Body

@@ -136,11 +136,11 @@ public class RealCall implements Call {
 }
 /**
  * 1. OKio OKHttp Retrofit源码
- * 2. RxJava 操作符 能自己封装一个RXView
- * 3. Thread Executor Android的异步 handler 多线程 HandlerThread
+ * 2. RxJava 操作符 能自己封装一个RXView RXRouter
+ * 3. Thread Executor Android的异步 handler 多线程 HandlerThread 锁机制
  * 4. apt apjectJ
  * 5. 注解 Dagger2 Annotations EventBus ButterKnife源码
- * 6. view 窗口机制
+ * 6. 自定义view 窗口机制 绘制流程
  * 7. Activity启动流程 aidl binder
  * 8. 事件分发
  * 9. Kotlin
@@ -150,12 +150,17 @@ public class RealCall implements Call {
  * 13. 测试 Junit AndroidTest
  * 14. jetPack
  * 15. gradle
- * 16. android动画
+ * 16. android动画 矢量动画等
  * 17. android适配
  * 18. 性能优化
  * 19. Glide。数据库GreenDao 手写数据库（动脑学院）
  * 20. WebView
  * 21. jni
+ * 22. LruCache DiskLruCache HashMap LinkedHashMap 等等
+ * 23. Java的泛型 element体系 type体系 泛型擦除
+ * 24. jvm art与Dalvik apk打包流程 java8新特性 异常
+ * 25. git adb-shell 等
+ * 26. 小程序
  *
  * * 数据结构 数据安全与加密 Http协议
  */

@@ -3,11 +3,12 @@ package com.bob.retrofit;
 import android.support.annotation.GuardedBy;
 import android.support.annotation.Nullable;
 
+import com.bob.retrofit.okhttp.MediaType;
+import com.bob.retrofit.okhttp.Request;
+import com.bob.retrofit.okhttp.ResponseBody;
+
 import java.io.IOException;
 
-import okhttp3.MediaType;
-import okhttp3.Request;
-import okhttp3.ResponseBody;
 import okio.Buffer;
 import okio.BufferedSource;
 import okio.ForwardingSource;
@@ -25,7 +26,7 @@ public class OkHttpCall<T> implements Call<T> {
      * @GuardedBy(lock) --> @GuardedBy( "this" ) 受对象内部锁保护
      */
     @GuardedBy("this")   //RealCall 是通过 OkHttpClient.newCall(request)创造的
-    private @Nullable okhttp3.Call rawCall;
+    private @Nullable com.bob.retrofit.okhttp.Call rawCall;
     @GuardedBy("this")
     private @Nullable Throwable creationFailure;
     @GuardedBy("this")
@@ -50,7 +51,7 @@ public class OkHttpCall<T> implements Call<T> {
      */
     @Override
     public synchronized Request request() {
-        okhttp3.Call call = rawCall;
+        com.bob.retrofit.okhttp.Call call = rawCall;
         if (call != null) {
             return call.request();
         }
@@ -85,7 +86,7 @@ public class OkHttpCall<T> implements Call<T> {
     public void enqueue(final Callback<T> callback) {
         Utils.checkNotNull(callback, "callback == null");
 
-        okhttp3.Call call;
+        com.bob.retrofit.okhttp.Call call;
         Throwable failure;
 
         synchronized (this) {
@@ -118,9 +119,10 @@ public class OkHttpCall<T> implements Call<T> {
         }
 
         //没有异常 也没有取消 那么开启请求
-        call.enqueue(new okhttp3.Callback() {
+        call.enqueue(new com.bob.retrofit.okhttp.Callback() {
+
             @Override
-            public void onResponse(okhttp3.Call call, okhttp3.Response rawResponse) throws IOException {
+            public void onResponse(com.bob.retrofit.okhttp.Call call, com.bob.retrofit.okhttp.Response rawResponse) throws IOException {
                 Response<T> response;
                 try {
                     //解析响应
@@ -142,7 +144,7 @@ public class OkHttpCall<T> implements Call<T> {
 
             //请求出现错误
             @Override
-            public void onFailure(okhttp3.Call call, IOException e) {
+            public void onFailure(com.bob.retrofit.okhttp.Call call, IOException e) {
                 callFailure(e);
             }
             private void callFailure(Throwable e) {
@@ -158,15 +160,17 @@ public class OkHttpCall<T> implements Call<T> {
     /**
      * @Desc 解析响应
      */
-    private Response<T> parseResponse(okhttp3.Response rawResponse) {
+    private Response<T> parseResponse(com.bob.retrofit.okhttp.Response rawResponse) throws IOException {
+        //拿出body
         ResponseBody rawBody = rawResponse.body();
-
-        //重新构建响应体
+        /** {@link NoContentResponseBody} 用来清空body **/
+        //重新构建响应体 这里清空了body
         rawResponse = rawResponse.newBuilder()
                 .body(new NoContentResponseBody(rawBody.contentType(), rawBody.contentLength()))
                 .build();
 
         int code = rawResponse.code();
+        //不是成功的code
         if (code < 200 || code >= 300) {
             try {
                 ResponseBody bufferedBody = Utils.buffer(rawBody);
@@ -176,6 +180,12 @@ public class OkHttpCall<T> implements Call<T> {
             }
         }
 
+        //204代表响应报文中包含若干首部和一个状态行，但是没有实体的主体内容
+        //      (204表示响应执行成功，但没有数据返回，浏览器不用刷新，不用导向新页面)
+        //205则是告知浏览器清除当前页面中的所有html表单元素，也就是表单重置
+        //      (205表示响应执行成功，重置页面（Form表单），方便用户下次输入)
+        //204也是访问成功，但是不返回任何数据，就像是a到b家玩了后，b什么都没给a，，
+        //205差不多就是，a到b家玩了之后，b还送了点礼物给a带回去，我是这么理解的
         if (code == 204 || code == 205) {
             rawBody.close();
             return Response.success(null, rawResponse);
@@ -188,38 +198,71 @@ public class OkHttpCall<T> implements Call<T> {
             T body = serviceMethod.toResponse(catchingBody);
             return Response.success(body, rawResponse);
         } catch (RuntimeException e) {
-            // If the underlying source threw an exception, propagate that rather than indicating it was
-            // a runtime exception.
             catchingBody.throwIfCaught();
             throw e;
         }
     }
 
-
-    @Override
-    public Response<T> execute() throws IOException {
-        return null;
-    }
-
-
-    private okhttp3.Call createRawCall() throws IOException {
-        okhttp3.Call call = serviceMethod.toCall(args);
+    //MethodService创建一个RealCall
+    private com.bob.retrofit.okhttp.Call createRawCall() throws IOException {
+        com.bob.retrofit.okhttp.Call call = serviceMethod.toCall(args);
         if (call == null) {
             throw new NullPointerException("Call.Factory returned null.");
         }
         return call;
     }
 
+    /**
+     * @Desc 同步请求 不用研究
+     */
+    @Override
+    public Response<T> execute() throws IOException {
+        com.bob.retrofit.okhttp.Call call;
+
+        synchronized (this) {
+            if (executed) {
+                throw new IllegalStateException("Already executed");
+            }
+            executed = true;
+
+            //有一异常就不会请求
+            if (creationFailure != null) {
+                if (creationFailure instanceof IOException) {
+                    throw (IOException) creationFailure;
+                } else if (creationFailure instanceof RuntimeException) {
+                    throw (RuntimeException) creationFailure;
+                } else {
+                    throw (Error) creationFailure;
+                }
+            }
+
+            call = rawCall;
+            if (call == null) {
+                try {
+                    call = rawCall = createRawCall();
+                } catch (IOException | RuntimeException | Error e) {
+                    creationFailure = e;
+                    throw e;
+                }
+            }
+        }
+
+        if (canceled) { call.cancel(); }
+
+        return parseResponse(call.execute());
+    }
+
+    //是否执行了
     @Override
     public boolean isExecuted() {
-        return false;
+        return executed;
     }
 
     @Override
     public void cancel() {
         canceled = true;
 
-        okhttp3.Call call;
+        com.bob.retrofit.okhttp.Call call;
         synchronized (this) {
             call = rawCall;
         }
