@@ -1,8 +1,12 @@
 package com.bob.retrofit.okio;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 
 public final class Okio {
     //私有构造
@@ -35,28 +39,71 @@ public final class Okio {
 
         return new Sink() {
 
+            //将数据写到buffer里面去
             @Override
             public void write(Buffer source, long byteCount) throws IOException {
+                while (byteCount > 0) {
+                    timeout.throwIfReached();
 
+                    //buffer都有一个Segment链表
+                    Segment head = source.head;
+                    //Sink接口的目的,就是将存在于内存Buffer对象中的数据,write到输出流中
+                    //那么复制多少呢？
+                    int toCopy = (int) Math.min(byteCount, head.limit - head.pos);
+                    //将Segment可以写的数据 放到OutputStream流中， 然后可以写到文件上
+                    //toCopy表示步长
+                    out.write(head.data, head.pos, toCopy);
+
+                    head.pos += toCopy;
+
+                    //byteCount只是一个基本类型 值不能传递的呀？
+                    byteCount -= toCopy;
+                    source.size -= toCopy;
+
+                    if (head.pos == head.limit) {
+                        //Segment断开与前驱和后继的联系
+                        source.head = head.pop();
+                        //SegmentPool 回收Segment 放进池子里
+                        SegmentPool.recycle(head);
+                    }
+                }
             }
 
             @Override
             public Timeout timeout() {
-                return null;
+                return timeout;
             }
 
             @Override
             public void flush() throws IOException {
-
+                //其实就是OutputStream的委托类
+                out.flush();
             }
 
             @Override
             public void close() throws IOException {
-
+                //其实就是OutputStream的委托类
+                out.close();
             }
         };
     }
 
+
+    //socket
+    public static Sink sink(Socket socket) throws IOException {
+        if (socket == null) throw new NullPointerException("socket == null");
+
+        AsyncTimeout timeout = timeout(socket);
+        Sink sink = sink(socket.getOutputStream(), timeout);
+        return timeout.sink(sink);
+    }
+
+    private static AsyncTimeout timeout(Socket socket) {
+        return new AsyncTimeout(){
+
+
+        };
+    }
 
 
     //输入流封装
@@ -84,10 +131,11 @@ public final class Okio {
                     //拿到一个可写的序列空间 //该sink 就是buffer 缓冲区 对Segment的包装
                     Segment tail = sink.writableSegment(1);
                     //tail.limit 为Segment可以写的位置
-                    int maxToCopay = (int) Math.min(byteCount, Segment.SIZE - tail.limit);
-                    //maxToCopay 表示该可写的Segment的最大可以写的字节数量
+                    int maxToCopy = (int) Math.min(byteCount, Segment.SIZE - tail.limit);
+                    //maxToCopy 表示该可写的Segment的最大可以写的字节数量
                     //通过输入流 将字节写到Segment中 返回写了多少个字节数量
-                    int bytesRead = in.read(tail.data, tail.limit, maxToCopay);
+                    //从limit开始可以写， maxToCopy 表示步长
+                    int bytesRead = in.read(tail.data, tail.limit, maxToCopy);
                     if (bytesRead == -1) return -1;
 
                     tail.limit += bytesRead;
@@ -109,10 +157,17 @@ public final class Okio {
 
             @Override
             public void close() throws IOException {
-
+                in.close();
             }
         };
     }
+
+    public static Source source(File file) throws FileNotFoundException {
+        return source(new FileInputStream(file));
+    }
+
+
+
 
 
 

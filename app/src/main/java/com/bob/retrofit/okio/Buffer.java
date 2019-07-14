@@ -94,6 +94,8 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
     @Override
     public long read(Buffer sink, long byteCount) throws IOException {
+
+        sink.write(this, byteCount);
         return 0;
     }
 
@@ -109,7 +111,13 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
     @Override
     public void write(Buffer source, long byteCount) throws IOException {
+        while (byteCount > 0) {
 
+            if (byteCount < (source.head.limit - source.head.pos)) {
+
+            }
+
+        }
     }
 
     @Override
