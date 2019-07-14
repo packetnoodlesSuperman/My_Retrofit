@@ -4,12 +4,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import okio.Buffer;
 import okio.BufferedSource;
 import okio.Okio;
 
 public class aa {
 
     public static void main(String[] args){
+
+
 //        try {
 //            final BufferedSink file = Okio.buffer(Okio.sink(new File("file")));
 //        } catch (FileNotFoundException e) {
@@ -26,6 +29,14 @@ public class aa {
                     e.printStackTrace();
                 }
             }
+
+
+            Buffer buffer = new Buffer();
+            long read = Okio.buffer(Okio.source(file))
+                    .read(buffer, 10000);
+
+
+
             bufferedSource = Okio.buffer(Okio.source(file));
 
             read(bufferedSource);
@@ -57,8 +68,9 @@ public class aa {
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
 
 
     }
