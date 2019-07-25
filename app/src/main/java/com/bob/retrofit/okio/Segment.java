@@ -16,9 +16,9 @@ public final class Segment {
     //代表自己是否可以操作本片段（与shared互斥）
     boolean owner;
     //pos代表开始可以读的字节序号
-    int limit;
-    //limit代表可以写的字节序号
     int pos;
+    //limit代表可以写的字节序号
+    int limit;
 
     final byte[] data;
 

@@ -22,7 +22,16 @@ public final class RealBufferedSource implements BufferedSource {
 
     @Override
     public long read(Buffer sink, long byteCount) throws IOException {
-        return 0;
+
+        if (buffer.size  == 0) {
+            long read = source.read(buffer, Segment.SIZE);
+            if (read == -1) {
+                return -1;
+            }
+        }
+
+        long toRead = Math.min(byteCount, buffer.size);
+        return buffer.read(sink, toRead);
     }
 
     @Override

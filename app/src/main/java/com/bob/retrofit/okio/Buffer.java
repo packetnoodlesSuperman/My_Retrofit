@@ -1,8 +1,11 @@
 package com.bob.retrofit.okio;
 
+import android.support.annotation.NonNull;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
@@ -25,6 +28,45 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
 
     private static final byte[] DIGITS = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+    public long size() {return size;}
+    public Buffer buffer() {return this; }
+
+    public OutputStream outputStream() {
+        return new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                writeByte((byte)b);
+            }
+
+            @Override
+            public void write(@NonNull byte[] b, int off, int len) throws IOException {
+                Buffer.this.write(b, off, len);
+            }
+        };
+    }
+
+    private Buffer write(byte[] b, int off, int len) {
+        int limit = off + len;
+        while (off < limit) {
+            Segment tail = writableSegment(1);
+            int toCopy = Math.min(limit = off, Segment.SIZE - tail.limit);
+            System.arraycopy(b, off, tail.data, tail.limit, toCopy);
+
+            off += toCopy;
+            tail.limit += toCopy;
+        }
+
+        size += len;
+        return this;
+    }
+
+    private Buffer writeByte(byte b) {
+        Segment segment = writableSegment(1);
+        segment.data[segment.limit++] = (byte)b;
+        size+=1;
+        return this;
+    }
 
     public long writeAll(Source source) throws IOException {
         if (source == null) throw new IllegalArgumentException("source == null");
@@ -94,6 +136,8 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
     @Override
     public long read(Buffer sink, long byteCount) throws IOException {
+
+        sink.write(this, byteCount);
         return 0;
     }
 
@@ -109,7 +153,13 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
     @Override
     public void write(Buffer source, long byteCount) throws IOException {
+        while (byteCount > 0) {
 
+            if (byteCount < (source.head.limit - source.head.pos)) {
+
+            }
+
+        }
     }
 
     @Override
