@@ -135,21 +135,21 @@ public class RealCall implements Call {
 
 }
 /**
- * 1. OKio OKHttp Retrofit源码        《Retorfit 75%  OKHttp 30%  Okio 0%》
+ * 1. OKio OKHttp Retrofit源码        《Retorfit 75%  OKHttp 30%  Okio 30%》
  * 2. RxJava 操作符 能自己封装一个RXView RXRouter   《Rxjava  5%》
  * 3. Thread Executor Android的异步 handler 多线程 HandlerThread 锁机制  《50%》
  * 4. apt aspjectJ  《apt PGYJSBridge 有简单实例，type体系 element体系需要巩固 65&   aspjectJ 60%  需要温习 笔记做一下》
  * 5. 注解 Dagger2 Annotations EventBus ButterKnife源码 《EventBus 50% 其他0%》
  * 6. 自定义view 窗口机制 绘制流程
- * 7. Activity启动流程 aidl binder 《aidl 20%》
+ * 7. Activity启动流程 aidl binder  《aidl 20%》
  * 8. 事件分发
- * 9. Kotlin
+ * 9. Kotlin             《30%》
  * 10. 组件化、插件化
  * 11.设计模式 原则等
- * 12. 反射 动态代理原理 类加载机制
+ * 12. 反射 动态代理原理 类加载机制      《30%》
  * 13. 测试 Junit AndroidTest
  * 14. jetPack
- * 15. gradle
+ * 15. gradle  《30%》
  * 16. android动画 矢量动画等
  * 17. android适配
  * 18. 性能优化

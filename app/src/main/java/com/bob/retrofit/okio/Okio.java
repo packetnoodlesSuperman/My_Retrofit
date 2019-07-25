@@ -1,8 +1,15 @@
 package com.bob.retrofit.okio;
 
+import android.support.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+
+
 
 public final class Okio {
     //私有构造
@@ -16,6 +23,7 @@ public final class Okio {
      * source.close();
      */
     /************* 获取buffer *************/
+    //获取 有buffer<缓存区>的包装流  RealBufferedSource和RealBufferedSink 内部都有一个buffer
     public static BufferedSource buffer(Source source) {
         return new RealBufferedSource(source);
     }
@@ -24,45 +32,64 @@ public final class Okio {
     }
 
     /**
-     * 输出流 封装
+     * 输出流 封装 写
+     * 创建一个Sink 用于封装OutputStream流
      */
     public static Sink sink(OutputStream out) {
         return sink(out, new Timeout());
     }
     private static Sink sink(final OutputStream out, final Timeout timeout) {
         if (out == null) throw new IllegalArgumentException("out == null");
-        if (timeout == null) throw new IllegalArgumentException("timeou == null");
+        if (timeout == null) throw new IllegalArgumentException("timeout == null");
 
+        /**
+         * 对Sink的认识
+         * 写的功能 通过Buffer缓存到的数据 委托给OutputStream写
+         * 刷新和关闭 也是OutputStream的事  谁让写的事是OutputStream做的呢！！
+         */
         return new Sink() {
-
+            /**
+             * 调用写的方法的时候 会将缓存区的buffer传递过来
+             */
             @Override
             public void write(Buffer source, long byteCount) throws IOException {
+                //checkOffsetAndCount(source.size, 0, byteCount); 边界检查
+                while (byteCount > 0) {
+                    timeout.throwIfReached();
+                    //获取buffer的内部双链表的 头部
+                    Segment head = source.head;
+                    //limit代表可以写的地方， post代表可以读的地方
+                    //limit - pos 就是Segment已经写上的数据的区域
+                    int toCopy = (int) Math.min(byteCount, head.limit - head.pos);
 
+                    //真正的输出流在写 可能是FileOutputStream  获取其他Java的输出流实现类
+                    out.write(head.data, head.pos, toCopy);
+
+                    //接下来你对Segment进行回收， 已经buffer的双链表进行调整
+                    head.pos += toCopy;     //这个Segment被你读过了 读过的数据被OutputStream写走了
+                    byteCount -= toCopy;
+                    source.size -= toCopy;
+
+                    if (head.pos == head.limit) {
+                        //buffer的头索引 指向下一个
+                        source.head = head.pop();
+                        SegmentPool.recycle(head);
+                    }
+                }
             }
 
             @Override
-            public Timeout timeout() {
-                return null;
-            }
-
+            public Timeout timeout() { return timeout; }
             @Override
-            public void flush() throws IOException {
-
-            }
-
+            public void flush() throws IOException { out.flush(); }
             @Override
-            public void close() throws IOException {
-
-            }
+            public void close() throws IOException { out.close(); }
         };
     }
 
 
-
     //输入流封装
-    public static Source source(InputStream in) {
-        return source(in, new Timeout());
-    }
+    public static Source source(InputStream in) { return source(in, new Timeout()); }
     private static Source source(final InputStream in, final Timeout timeout) {
         if (in == null) throw new IllegalArgumentException("in == null");
         if (timeout == null) throw new IllegalArgumentException("timeout == null");
@@ -70,7 +97,8 @@ public final class Okio {
         return new Source() {
 
             /**
-             * @Desc 读流的操作
+             * 读流的操作  将数据写在buffer缓存区里面
+             * 写到buffer缓存区里面  就是读到了内存里
              */
             @Override
             public long read(Buffer sink, long byteCount) throws IOException {
@@ -95,26 +123,52 @@ public final class Okio {
 
                     return bytesRead;
                 } catch (AssertionError e) {
-                    if (isAndroidGetsocknameError(e)) {
-                        throw new IOException(e);
-                    }
+                    if (isAndroidGetsocknameError(e)) { throw new IOException(e); }
                     throw e;
                 }
             }
 
             @Override
             public Timeout timeout() {
-                return null;
+                return timeout;
             }
-
             @Override
-            public void close() throws IOException {
-
-            }
+            public void close() throws IOException { }
         };
     }
 
 
+    /****************************** 其他 ******************************/
+    public static Sink sink(Socket socket) throws IOException {
+        if (socket == null) throw new IllegalArgumentException("socket == null");
+        if (socket.getOutputStream() == null) throw new IOException("socket's output stream == null");
+
+        AsyncTimeout timeout = timeout(socket);
+        Sink sink = sink(socket.getOutputStream(), timeout);
+        return timeout.sink(sink);
+    }
+
+    private static AsyncTimeout timeout(final Socket socket) {
+        return new AsyncTimeout() {
+            @Override
+            protected IOException newTimeoutException(@Nullable IOException cause) {
+                InterruptedIOException ioe = new SocketTimeoutException("timeout");
+                if (cause != null) {
+                    ioe.initCause(cause);
+                }
+                return ioe;
+            }
+
+            @Override
+            protected void timedOut() {
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
 
     static boolean isAndroidGetsocknameError(AssertionError e) {
