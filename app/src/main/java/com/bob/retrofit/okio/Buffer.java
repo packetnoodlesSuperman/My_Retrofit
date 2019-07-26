@@ -10,27 +10,25 @@ import java.nio.charset.Charset;
 
 public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
+    private static final byte[] DIGITS = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+    public Buffer() {}
+
     //buffer对SegmentPool的使用 buffer的真实存储空间就是 segment
     Segment head;
     long size;
 
-    Segment writableSegment(int minimumCapacity) {
+    public long size() {return size;}
+    public Buffer buffer() {return this; }
 
+    Segment writableSegment(int minimumCapacity) {
         if (head == null) {
             head = SegmentPool.take();
             return head.next = head.prev = head;
         }
-
         Segment tail = head.prev;
-
         return tail;
     }
-
-
-    private static final byte[] DIGITS = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
-
-    public long size() {return size;}
-    public Buffer buffer() {return this; }
 
     public OutputStream outputStream() {
         return new OutputStream() {
@@ -43,6 +41,8 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
             public void write(@NonNull byte[] b, int off, int len) throws IOException {
                 Buffer.this.write(b, off, len);
             }
+            @Override public void flush() { }
+            @Override public void close() { }
         };
     }
 
@@ -56,7 +56,6 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
             off += toCopy;
             tail.limit += toCopy;
         }
-
         size += len;
         return this;
     }
@@ -66,6 +65,25 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
         segment.data[segment.limit++] = (byte)b;
         size+=1;
         return this;
+    }
+
+    /**
+     * 只写 int类型的 后面两个字节  因为writeShort
+     */
+    public Buffer writeShort(int s) {
+        //需要两个字节
+        Segment tail = writableSegment(2);
+        byte[] data = tail.data;
+        int limit = tail.limit;
+        data[limit++] = (byte) ((s >>> 8) & 0xff);
+        data[limit++] = (byte)  (s        & 0xff);
+        tail.limit = limit;
+        size += 2;
+        return this;
+    }
+
+    public Buffer writeShortLe(int s) {
+        return writeShort(Util.reverseBytesShort((short) s));
     }
 
     public long writeAll(Source source) throws IOException {
@@ -78,6 +96,9 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
         return totalBytesRead;
     }
 
+
+
+
     public String readUtf8() {
         try {
             return readString(size, Util.UTF_8);
@@ -87,13 +108,10 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
     }
 
     public String readString(long byteCount, Charset charset) throws EOFException {
-
         Segment s = head;
         if (s.pos + byteCount > s.limit) {
             return new String(readByteArray(byteCount), charset);
         }
-
-
         return null;
     }
 
@@ -132,8 +150,6 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
         return toCopy;
     }
-
-
     @Override
     public long read(Buffer sink, long byteCount) throws IOException {
 
