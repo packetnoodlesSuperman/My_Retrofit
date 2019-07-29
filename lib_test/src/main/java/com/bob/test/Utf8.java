@@ -9,23 +9,40 @@ public final class Utf8 {
     public static long size(String string) {
         return size(string, 0, string.length());
     }
+    public static byte[] charToByte(char c) {
+        byte[] b = new byte[2];
+        b[0] = (byte) ((c & 0xFF00) >> 8);
+        b[1] = (byte) (c & 0xFF);
+        return b;
+    }
 
     public static void main(String[] args) {
         //　char 在java中是2个字节。java采用unicode，2个字节（16位）来表示一个字符
         // https://maimode.iteye.com/blog/1341354
-        char c = '你';
-        byte r = (byte ) c;
-        System.out.println("r="+r);
+        Character p = '春'; //\u6625  cmd->输入native2ascii->回车->输入中文->回车
+        Character o = '龳';
 
-        System.out.println("你".toCharArray());
-        System.out.println("你".toCharArray().length);
-        byte[] bytes = "你".getBytes(Charset.forName("gbk"));
-        for (byte b : bytes) {
-            System.out.println(b);
+        // 这里有一个中文 \ud87e\udc09 这个中文需要四个字节 就不能用char表示
+        // https://www.qqxiuzi.cn/zh/hanzi-unicode-bianma.php?zfj=jrkz
+
+//        char o = '\u6625';
+        //获取系统默认编码
+        System.out.println(System.getProperty("file.encoding"));
+        //获取系统默认的字符编码
+        System.out.println(Charset.defaultCharset());
+        System.out.println();
+//        byte[] unicodes = charToByte(o);
+//        byte[] unicodes = "龳春".getBytes(Charset.forName("unicode"));
+        byte[] unicodes = "龳春".getBytes(Charset.forName("utf8"));
+        for (byte b : unicodes) {
+            //-2,1表示这代表是unicode格式（代表ff,fe)  //UTF-32 与 UTF-16 一样有大尾序和小尾序之别，编码前会放置 U+0000FEFF 或 U+0000FFFE 以区分
+            //-97 -77 代表unicode的字符位置
+            //1110 0001 1100 0111 unicode  1110 0000 1100 0110  -> 1001 1111 1011 1001 (反码 到 补码 到 原码)
+            //1001 0111 1100 0010 1100 0111  -23 -66 -77 utf-8  1001 0110 1100 0001 1100 0110  -> 1110 1001 1011 1110 10 11 1001 (反码 到 补码 到 原码)
+            //                                                  -> 1001 11 1110 11 1001 utf-8转unicode 去掉前缀
+            //内存读的都是补码
+            System.out.println("unicodes ---> " + b) ;
         }
-          //0b 1b6d3586
-        //
-        System.out.println(size("你"));
     }
 
     public static long size(String string, int beginIndex, int endIndex) {

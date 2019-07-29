@@ -19,7 +19,7 @@ public class Interceptors {
         Sink sink = new InterceptingSink(wire) {
             @Override
             protected void intercept(byte[] data, int offset, int length) throws IOException {
-                      
+
             }
         };
 

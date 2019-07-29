@@ -1,5 +1,17 @@
 package com.bob.retrofit.okio;
 
+/**
+ * https://blog.csdn.net/wufaliang003/article/details/79573512
+ * 什么是Base64 < Base64算法主要最早用于解决电子邮件传输问题></>
+ * base64 最早就是用来邮件传输协议中的，原因是邮件传输协议只支持 ascii 字符传递，因此如果要传输二进制文件，
+ * 如：图片、视频是无法实现的。因此 base64 就可以用来将二进制文件内容编码为只包含 ascii 字符的内容，这样就可以传输了
+ *
+ * 以前的交换机只能处理标准ascii码。也就是说最高位是0
+ * 当邮件传输图片资源的时候，某一个Byte值是10111011B，对应十进制187不属于ASCII码范围，因此无法被传输
+ *
+ * 在早期，由于历史问题，电子邮件只允许传输ASCII码字符。当传输非ASCII码时，网关很可能将非ASCII码的二进制位调整，
+ * 即将非ASCII码的8位二进制的最高位置0。当用户收到邮件时，可想而知，收到的就是 一份乱码的邮件。
+ */
 public class Base64 {
 
     private Base64() {}
@@ -41,4 +53,7 @@ public class Base64 {
             '5', '6', '7', '8', '9', '-', '_'
     };
 
+    public static String encode(byte[] data) {
+        return null;
+    }
 }
